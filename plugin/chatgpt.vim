@@ -14,6 +14,7 @@ import os
 
 try:
     import openai
+    client = openai.OpenAI(base_url=os.getenv("OPENAI_API_BASE"))
 except ImportError:
     print("Error: openai module not found. Please install with Pip and ensure equality of the versions given by :!python3 -V, and :python3 import sys; print(sys.version)")
     raise
@@ -29,7 +30,7 @@ if !exists("g:chat_gpt_max_tokens")
 endif
 
 if !exists("g:chat_gpt_temperature")
-  let g:chat_gpt_temperature = 0.7
+  let g:chat_gpt_temperature = 0.4
 endif
 
 if !exists("g:chat_gpt_model")
@@ -50,7 +51,7 @@ function! DisplayChatGPTResponse(response, finish_reason, chat_gpt_session_id)
   let chat_gpt_session_id = a:chat_gpt_session_id
 
   if !bufexists(chat_gpt_session_id)
-    silent execute 'new '. chat_gpt_session_id
+    silent execute 'vnew '. chat_gpt_session_id
     call setbufvar(chat_gpt_session_id, '&buftype', 'nofile')
     call setbufvar(chat_gpt_session_id, '&bufhidden', 'hide')
     call setbufvar(chat_gpt_session_id, '&swapfile', 0)
@@ -61,7 +62,7 @@ function! DisplayChatGPTResponse(response, finish_reason, chat_gpt_session_id)
   endif
 
   if bufwinnr(chat_gpt_session_id) == -1
-    execute 'split ' . chat_gpt_session_id
+    execute 'vsplit ' . chat_gpt_session_id
   endif
 
   let last_lines = getbufline(chat_gpt_session_id, '$')
@@ -96,7 +97,7 @@ def chat_gpt(prompt):
   systemCtx = {"role": "system", "content": f"You are a helpful expert programmer we are working together to solve complex coding challenges, and I need your help. Please make sure to wrap all code blocks in ``` annotate the programming language you are using. {resp}"}
 
   try:
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
       model=model,
       messages=[systemCtx, {"role": "user", "content": prompt}],
       max_tokens=max_tokens,
@@ -118,9 +119,9 @@ def chat_gpt(prompt):
     # Iterate through the response chunks
     for chunk in response:
       chunk_session_id = session_id if session_id else chunk["id"]
-      choice = chunk["choices"][0]
-      finish_reason = choice.get("finish_reason")
-      content = choice.get("delta", {}).get("content")
+      choice = chunk.choices[0]
+      finish_reason = choice.finish_reason
+      content = choice.delta.content
 
       # Call DisplayChatGPTResponse with the finish_reason or content
       if finish_reason:
