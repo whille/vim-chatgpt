@@ -24,7 +24,7 @@ openai.api_key = os.getenv('OPENAI_API_KEY') or vim.eval('g:openai_api_key')
 openai.proxy = os.getenv("OPENAI_PROXY")
 
 sys.path.append(vim.eval('expand("<sfile>:h")'))
-from sneak import Gaga
+from gaga.sneak import Gaga
 ga = Gaga()
 
 EOF
@@ -78,7 +78,9 @@ function! DisplayChatGPTResponse(response, finish_reason, chat_gpt_session_id)
 
   let clean_lines = []
   for line in lines
-    call add(clean_lines, substitute(line, '\r', '', 'g'))
+      let line = substitute(line, '\r', '', 'g')
+      "let line = Galookup(substitute(line, '\r', '', 'g'))
+    call add(clean_lines, line)
   endfor
 
   call setbufline(chat_gpt_session_id, '$', clean_lines)
@@ -132,7 +134,6 @@ def chat_gpt(prompt):
       if finish_reason:
         vim.command("call DisplayChatGPTResponse('', '{0}', '{1}')".format(finish_reason.replace("'", "''"), chunk_session_id))
       elif content:
-        # content = ga.decode(content.replace("'", "''"))
         content = content.replace("'", "''")
         vim.command("call DisplayChatGPTResponse('{0}', '', '{1}')".format(content, chunk_session_id))
 
@@ -157,6 +158,19 @@ EOF
 endfunction
 
 
+function! Galookup(s)
+    python3 << EOF
+import vim
+s = vim.eval('a:s')
+# print(f"lookup : {ga.encoder.lookup}")
+res = ga.lookup(s)
+# print(f"res: {res}")
+vim.command(f'let ga_result = "{res}"')
+EOF
+  return ga_result
+endfunction
+
+
 " Function to send highlighted code to ChatGPT
 function! SendHighlightedCodeToChatGPT(ask, context)
   " Save the current yank register
@@ -173,7 +187,7 @@ function! SendHighlightedCodeToChatGPT(ask, context)
   let yanked_text = ''
 
   if (col_end - col_start > 0) || (line_end - line_start > 0)
-    call GaEncode()
+    "call GaEncode()
     let yanked_text = '```' . "\n" . @@ . "\n" . '```'
   endif
 
